@@ -7,17 +7,34 @@ server.listen('3000');
 
 const projects = [];
 
+function findProject(id){
+    return projects.find(project => project.id === Number(id));
+};
+
+function checkTitle(request, response, next){
+    const {title} = request.body;
+
+    if(!title){
+        return response.status(400).json({
+            error: "Undefined title"
+        });
+    };
+
+    return next();
+}
+
 function checkProject(request, response, next){
     const { id } = request.params;
+
+    const project = findProject(id);
     
-    projects.forEach(project=>{
-        if(project.id === Number(id)){
-            return next();
-        }
-    });
-    return response.status(404).json({
-        error: "Project not found"
-    });
+    if(!project){
+        return response.status(404).json({
+            error: "Project not found"
+        });
+    }
+
+    return next();
 }
 
 function checkRequest(request, response, next){
@@ -32,7 +49,7 @@ server.get('/projects', (request, response)=>{
     return response.json(projects);
 });
 
-server.post('/projects/create', (request, response)=>{
+server.post('/projects/create', checkTitle, (request, response)=>{
     const { id, title } = request.body;
 
     projects.push({
@@ -44,41 +61,34 @@ server.post('/projects/create', (request, response)=>{
     return response.json(projects);
 });
 
-server.post('/projects/create/:id/tasks', checkProject, (request, response)=>{
+server.post('/projects/create/:id/tasks', checkProject, checkTitle, (request, response)=>{
     const { id } = request.params;
     const { title } = request.body;
 
-    projects.forEach(project=>{
-        if(project.id === Number(id)){
-            project.tasks = [...project.tasks, title];
-        };
-    });
+    const project = findProject(id);
 
+    project.tasks.push(title);
+    
     return response.json(projects);
 });
 
-server.put('/projects/update/:id', checkProject, (request, response)=>{
+server.put('/projects/update/:id', checkProject, checkTitle, (request, response)=>{
     const { id } = request.params;
     const { title } = request.body;
 
-    projects.forEach(project=>{
-        if(project.id === Number(id)){
-            project.title = title
-        };
-    });
-
+    const project = findProject(id);
+    
+    project.title = title;
+     
     return response.json(projects);
 });
 
 server.delete('/projects/delete/:id', checkProject, (request, response)=>{
     const { id } = request.params;
 
-    projects.forEach(project=>{
-        if(project.id === Number(id)){
-            const index  = projects.indexOf(project);
-            projects.splice(index, 1);
-        };
-    });
+    const indexProject = projects.findIndex(item => item.id === Number(id));
+
+    projects.splice(indexProject, 1);
 
     return response.json(projects);
 });
